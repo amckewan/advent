@@ -27,9 +27,31 @@ T{ EXAMPLE 16 + COUNT 1 /STRING LARGEST SWAP C@ ->  1 '9' }T
     1- LARGEST  OVER C@ '0' - >R  1 /STRING
     1+ LARGEST  DROP C@ '0' - R> 10 * + ;
 
-: JOLTS ( input -- jolts )  0 SWAP
+: PART1 ( input -- jolts )  0 SWAP
    BEGIN  DUP COUNT BANK  ROT + SWAP
      COUNT +  DUP C@ 0= UNTIL  DROP ;
 
-T{ EXAMPLE JOLTS -> 357 }T
-T{ INPUT JOLTS -> 17435 }T
+T{ EXAMPLE PART1 -> 357 }T
+T{ INPUT   PART1 -> 17435 }T
+
+.( Part 1: ) INPUT PART1 . CR
+
+( ===== PART 2 ===== )
+
+VARIABLE TOTAL
+VARIABLE JOLTS
+
+: ACCUM ( a n -- a' n' )
+    OVER C@ '0' -  JOLTS @ 10 * +  JOLTS !  1 /STRING ;
+
+: BANK2 ( a n -- )  0 JOLTS !
+    11 - 12 0 DO  LARGEST ACCUM 1+  LOOP  2DROP
+    JOLTS @ TOTAL +! ;
+
+: PART2 ( input -- jolts )   0 TOTAL !
+    BEGIN  COUNT  ?DUP WHILE  2DUP BANK2 +  REPEAT  DROP  TOTAL @ ;
+
+T{ EXAMPLE PART2 -> 3121910778619 }T
+T{ INPUT   PART2 -> 172886048065379 }T
+
+.( Part 2: ) INPUT PART2 . CR
