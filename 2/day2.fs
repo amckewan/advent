@@ -1,55 +1,87 @@
-\ Day 2, part 1
+\ Day 2
 
 [DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
 
 include input.fs ( defined INPUT )
 : EXAMPLE S" 11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124" ;
 
-\ Check if ID is invalid
-: INVALID? ( n -- f )  >R ( n)  11 ( divisor) 100 ( limiter)
-    BEGIN  DUP 1000000000000000000 <= WHILE
-        R@ OVER < IF ( even # digits)  DROP   R> SWAP MOD 0=  EXIT  THEN
-        10 *  R@ OVER < IF ( odd #)    2DROP  R> DROP FALSE   EXIT  THEN
-        10 *     ( limiter)  SWAP
-        10 * 9 - ( divisor)  SWAP
-    REPEAT   2DROP  R> DROP  FALSE ;
+CREATE PATTERNS1
+\ digits       limit        patterns
+(  2 )                 99 , 11 , 0 ,
+(  3 )                999 , 0 ,
+(  4 )               9999 , 101 , 0 ,
+(  5 )              99999 , 0 ,
+(  6 )             999999 , 1001 , 0 ,
+(  7 )            9999999 , 0 ,
+(  8 )           99999999 , 10001 , 0 ,
+(  9 )          999999999 , 0 ,
+( 10 )         9999999999 , 100001 , 0 ,
+( 11 )        99999999999 , 0 ,
+( 12 )       999999999999 , 1000001 , 0 ,
+( 13 )      9999999999999 , 0 ,
+( 14 )     99999999999999 , 10000001 , 0 ,
+( 15 )    999999999999999 , 0 ,
+( 16 )   9999999999999999 , 100000001 , 0 ,
+( 17 )  99999999999999999 , 0 ,
+( 18 ) 999999999999999999 , 1000000001 , 0 ,
 
-VARIABLE INVALID  ( sum of invalid IDs )
+CREATE PATTERNS2
+\ digits       limit        patterns
+(  2 )                 99 , 11 , 0 ,
+(  3 )                999 , 111 , 0 ,
+(  4 )               9999 , 1111 , 101 , 0 ,
+(  5 )              99999 , 11111 , 0 ,
+(  6 )             999999 , 111111 , 10101 , 1001 , 0 ,
+(  7 )            9999999 , 1111111 , 0 ,
+(  8 )           99999999 , 11111111 , 1010101 , 10001 , 0 ,
+(  9 )          999999999 , 111111111 , 1001001 , 0 ,
+( 10 )         9999999999 , 1111111111 , 101010101 , 100001 , 0 ,
+( 11 )        99999999999 , 11111111111 , 0 ,
+( 12 )       999999999999 , 111111111111 , 10101010101 , 1001001001 , 100010001 , 1000001 , 0 ,
+( 13 )      9999999999999 , 1111111111111 , 0 ,
+( 14 )     99999999999999 , 11111111111111 , 1010101010101 , 10000001 , 0 ,
+( 15 )    999999999999999 , 111111111111111 , 1001001001001 , 10000100001 , 0 ,
+( 16 )   9999999999999999 , 1111111111111111 , 101010101010101 , 1000100010001 , 100000001 , 0 ,
+( 17 )  99999999999999999 , 11111111111111111 , 0 ,
+( 18 ) 999999999999999999 , 111111111111111111 , 10101010101010101 , 1001001001001001 , 1000001000001 , 1000000001 , 0 ,
 
-: CHECK-RANGE ( from to -- )
+VARIABLE PATTERNS   ( pattern table)
+VARIABLE INVALID    ( sum of invalid IDs )
+
+: NEXT-PAT ( a -- a' )   BEGIN  DUP @ WHILE  CELL+  REPEAT  CELL+ ;
+: FIND-PAT ( n -- n a )  PATTERNS @ BEGIN  2DUP @ > WHILE  NEXT-PAT  REPEAT ;
+
+: INVALID? ( n -- f )  FIND-PAT
+    BEGIN  CELL+  DUP @ WHILE ( n pat )
+        2DUP @ MOD 0= IF  2DROP  TRUE EXIT THEN
+    REPEAT  2DROP  FALSE ;
+
+: RANGE ( from to -- )
     1+ SWAP DO  I INVALID? IF  I INVALID +!  THEN  LOOP ;
 
 : NUMBER ( a n -- u a+ n- )  0. 2SWAP >NUMBER  ROT DROP ;
 : ?DELIM ( a n c -- a' n' )  >R OVER C@ R> <> ABORT" delim?"  1 /STRING ;
 
 : CHECK ( a n -- )  0 INVALID !
-    BEGIN   NUMBER  '-' ?DELIM  NUMBER  2>R  CHECK-RANGE  2R>
+    BEGIN   NUMBER  '-' ?DELIM  NUMBER  2>R  RANGE  2R>
         DUP WHILE   ',' ?DELIM 
     REPEAT  2DROP ;
 
-INPUT CHECK
-CR INVALID ?
+
+: PART   PATTERNS !  INPUT CHECK  INVALID ? ;
+: PART1  PATTERNS1 PART ;
+: PART2  PATTERNS2 PART ;
 
 
 ( ===== TESTS ===== )
 include ../ttester.fs
 
-T{ EXAMPLE CHECK  INVALID @ -> 1227775554 }T
+PATTERNS1 PATTERNS !
+T{ EXAMPLE CHECK  INVALID @ ->  1227775554 }T
 T{ INPUT CHECK    INVALID @ -> 38158151648 }T
 
-T{ -> }T
-T{ 11           INVALID? -> TRUE }T
-T{ 22           INVALID? -> TRUE }T
-T{ 99           INVALID? -> TRUE }T
-T{ 1010         INVALID? -> TRUE }T
-T{ 1188511885   INVALID? -> TRUE }T
-T{ 222222       INVALID? -> TRUE }T
-T{ 446446       INVALID? -> TRUE }T
-T{ 38593859     INVALID? -> TRUE }T
-
-T{ 0            INVALID? -> TRUE  }T ( quirk )
-T{ 97           INVALID? -> FALSE }T
-T{ 1231234      INVALID? -> FALSE }T
-T{ 100101       INVALID? -> FALSE }T
+PATTERNS2 PATTERNS !
+T{ EXAMPLE CHECK  INVALID @ ->  4174379265 }T
+T{ INPUT CHECK    INVALID @ -> 45283684555 }T
 
 
