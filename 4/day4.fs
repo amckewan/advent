@@ -11,6 +11,8 @@ create map   here  200 dup *  dup allot erase
 : 'row ( r -- a )    1+  cols 1+ 1+ *  map + ;
 : at ( r c -- 0/1)   swap 'row + c@ ;
 
+: remove ( r c )  swap 'row +  0 swap c! ;
+
 : .row ( n)   cr 0 .r ." : " ;
 : .map  rows 0 do i .row  cols 0 do j i at . loop loop ;
 
@@ -43,7 +45,9 @@ include input.fs
     2dup at if  3x3 4 < negate  else  2drop 0 ( no roll)  then ;
 
 : solve ( -- n )
-    0  rows 0 do  cols 0 do  j i ok? +  loop loop ;
+    0  rows 0 do  cols 0 do  j i ok? dup if j i remove then +  loop loop ;
 
 \  : .3x3  rows 0 do i .row  cols 0 do j i 3x3 . loop loop ;
 \  : .solve  rows 0 do i .row  cols 0 do j i ok? . loop loop ;
+
+: part2  0 begin  solve  ?dup while  +  repeat ; // 8557
