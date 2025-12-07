@@ -25,40 +25,29 @@ VARIABLE IN
 : .ROW ( n -- )  WIDTH * DATA + WIDTH TYPE SPACE ;
 : .DATA  ROWS 1+ 0 DO CR I .ROW LOOP ;
 
-\ find the width of a column from the operations row
-: #COL ( col -- n )
-    ROWS SWAP 'AT 1+  DUP BEGIN COUNT BL > UNTIL  1-  SWAP - ;
-
 : NUM ( col -- n )  0 ( n )
     ROWS 0 DO
         OVER I SWAP AT  DUP BL - IF  '0' -  SWAP 10 * +  ELSE DROP THEN
     LOOP NIP ;
 
-: START ( col -- 0/1 )  ROWS SWAP AT '+' = 1+ ;
+VARIABLE OP
+: OP! ( col -- )  ROWS SWAP AT ( c )
+    DUP '+' =  OVER '*' =  OR IF  OP !  ELSE  DROP  THEN ;
+: DO-OP ( n1 n2 -- n3 ) OP @ '+' = IF + ELSE * THEN ;
 
-DEFER OP ( n1 n2 -- n3 )
-variable calcs
-: CALC ( col -- n )   1 calcs +!
-    DUP START ( col n )
-    DUP IF ['] * ELSE ['] + THEN  IS OP ( set operation )
-    SWAP DUP #COL BOUNDS DO  I NUM  OP  LOOP ;
+VARIABLE TOTAL
+: ACT  ( 0 n1...nX -- 0 )
+    BEGIN  OVER WHILE  DO-OP  REPEAT  TOTAL +! ;
 
-: TOTAL ( -- n )  0 0
-    BEGIN ( n col )
-        DUP CALC  ROT + SWAP
-        DUP #COL 1+ + ( next col)
-        DUP WIDTH >=
-    UNTIL DROP ;
+: COLUMN ( 0 n1 n2 ... nX col -- 0 n1 n2 ... nX nX+1 | 0 )
+    DUP NUM  DUP 0= IF  2DROP  ACT  ELSE  SWAP OP!  THEN ;
+
+: SOLVE ( -- n )  TOTAL OFF
+     0  WIDTH 0 DO  I COLUMN  LOOP  ACT DROP  TOTAL @ ;
+
 
 S" example.txt" INPUT
-
-T{ 0 CALC -> 8544 }T
-T{ 4 CALC -> 625 }T
-T{ 8 CALC -> 3253600 }T
-T{ 12 CALC -> 1058 }T
-T{ TOTAL -> 3263827 }T
+T{ SOLVE -> 3263827 }T
 
 S" input.txt" INPUT
-\  9716259487083 too low
-\ 10142723154972 too low
-
+T{ SOLVE -> 10142723156431 }T
