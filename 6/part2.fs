@@ -1,8 +1,6 @@
 \ Day 6, part 2
 
-[DEFINED] EMPTY [IF] EMPTY [THEN] MARKER EMPTY
-include ../ttester.fs
-CLEARSTACK DECIMAL
+include ../init.fs
 
 VARIABLE IN
 10000 CONSTANT MAX-LINE
@@ -33,15 +31,34 @@ VARIABLE IN
 
 : NUM ( col -- n )  0 ( n )
     ROWS 0 DO
-        OVER I SWAP AT   DUP BL = IF  DROP LEAVE  THEN
-        '0' - SWAP 10 * +
+        OVER I SWAP AT  DUP BL - IF  '0' -  SWAP 10 * +  ELSE DROP THEN
     LOOP NIP ;
 
-: +? ( col -- f )  ROWS SWAP AT '+' = ;
-: START ( col -- n )      +? IF 0 ELSE 1 THEN ;
-: OP ( n1 n2 col -- n3 )  +? IF + ELSE * THEN ;
+: START ( col -- 0/1 )  ROWS SWAP AT '+' = 1+ ;
 
-: CALC ( col -- n )  DUP START SWAP
-    DUP DUP #COL + SWAP DO  I NUM  I OP   LOOP ;
+DEFER OP ( n1 n2 -- n3 )
+variable calcs
+: CALC ( col -- n )   1 calcs +!
+    DUP START ( col n )
+    DUP IF ['] * ELSE ['] + THEN  IS OP ( set operation )
+    SWAP DUP #COL BOUNDS DO  I NUM  OP  LOOP ;
+
+: TOTAL ( -- n )  0 0
+    BEGIN ( n col )
+        DUP CALC  ROT + SWAP
+        DUP #COL 1+ + ( next col)
+        DUP WIDTH >=
+    UNTIL DROP ;
 
 S" example.txt" INPUT
+
+T{ 0 CALC -> 8544 }T
+T{ 4 CALC -> 625 }T
+T{ 8 CALC -> 3253600 }T
+T{ 12 CALC -> 1058 }T
+T{ TOTAL -> 3263827 }T
+
+S" input.txt" INPUT
+\  9716259487083 too low
+\ 10142723154972 too low
+
