@@ -6,9 +6,14 @@ include ../init.fs
 0 VALUE #BOXES
 
 : BOX ( box# -- a )  3 CELLS * BOXES + ;
+
 : X   ( box -- x )   @ ;
 : Y   ( box -- y )   CELL + @ ;
 : Z   ( box -- z )   2 CELLS + @ ;
+
+: X!   ( x box -- )   ! ;
+: Y!   ( y box -- )   CELL + ! ;
+: Z!   ( z box -- )   2 CELLS + ! ;
 
 : .BOX ( box# )  BOX  DUP X 0 .R  ." ,"  DUP Y 0 .R  ." ,"  Z . ;
 
@@ -20,7 +25,7 @@ include ../init.fs
 
 0 VALUE DISTANCES
 : 'DIST ( b1 b2 -- a )  #BOXES * +  CELLS DISTANCES + ;
-: CALC ( -- ) \ pre-calculate distances
+: PRECALC ( -- ) \ pre-calculate distances
     HERE TO DISTANCES  #BOXES DUP * CELLS ALLOT
     #BOXES 0 DO  #BOXES 0 DO  I J DIST  I J 'DIST !  LOOP LOOP ;
 : DISTANCE  ( b1 b2 -- n )  'DIST @ ;
@@ -29,7 +34,7 @@ include ../init.fs
     #BOXES 0 DO  CR #BOXES 0 DO  I J DISTANCE 5 .R  LOOP LOOP ;
 
 : :BOXES  ALIGN  HERE TO BOXES ;
-: ;BOXES  HERE BOXES - 3 CELLS / TO #BOXES  CALC ;
+: ;BOXES  HERE BOXES - 3 CELLS / TO #BOXES  PRECALC ;
 
 : EXAMPLE
     :BOXES
@@ -61,11 +66,32 @@ T{ 1 3 DISTANCE -> 1 3 DIST }T
 
 : ZEROS  0  #BOXES 0 DO  #BOXES 0 DO  J I DISTANCE 0= IF 1+ THEN  LOOP LOOP ;
 
-: SHORTEST ( -- b1 b2 )   0 0 -1
+: SHORTEST ( floor -- b1 b2 )   0 0 ROT 1+ -1 ( b1 b2 floor+1 shortest )
     #BOXES 0 DO  #BOXES 0 DO
-      I J DISTANCE  ?DUP IF  OVER U< ( shorter? )
-        IF  DROP 2DROP  I J 2DUP DISTANCE  THEN THEN
-    LOOP LOOP DROP ;
+        2DUP I J DISTANCE -ROT WITHIN ( > floor and < shortest )
+        IF  DROP NIP NIP  I J  ROT  I J DISTANCE  THEN
+    LOOP LOOP 2DROP ;
+
+\ Connection:   link, b1, b2
+\ Circuit:      link, connection
+VARIABLE CIRCUITS
+: LINK, ( a -- )  HERE  OVER @ ,  SWAP ! ;
+
+: ADD ( b1 b2 circuit -- )  CELL+ LINK, , , ;
+
+: .() ( n )  ."  (" 0 .R ." ) " ;
+
+: .CONNECTION ( a )  CELL+ 2@  2DUP .BOX ." - " .BOX  DISTANCE .() ;
+: .CIRCUIT ( a )  BEGIN  CR DUP .CONNECTION  @ ?DUP 0= UNTIL ;
+: .CIRCUITS  CIRCUITS BEGIN  @ ?DUP WHILE  DUP CELL+ @ .CIRCUIT  REPEAT ;
+
+
+\  : IN-CIRCUIT? ( b circuit -- f )
+
+
+\  : CIRCUIT, ( b1 b2 -- )  CIRCUITS LINK, , , ;
 
 : CONNECT ( b1 b2 -- )
-;
+    CIRCUITS @ 0= IF  CIRCUITS LINK,  0 ,  THEN
+    CIRCUITS @ ADD ;
+
