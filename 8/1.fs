@@ -77,7 +77,7 @@ T{ 1 3 DISTANCE -> 1 3 DIST }T
 : .() ( n )  ."   (" 0 .R ." ) " ;
 : L>H ( b1 b2 -- low high )  2DUP > IF SWAP THEN ;
 
-\ A connection is a pair of boxes
+\ A connection is a pair of boxes (not used in the solution)
 VARIABLE CONNECTIONS
 : LINK ( a -- )  HERE  OVER @ ,  SWAP ! ;
 : +CONN ( b1 b2 -- )  CONNECTIONS LINK  L>H , , ;
@@ -88,6 +88,7 @@ VARIABLE CONNECTIONS
 : .CONNECTIONS   CONNECTIONS  BEGIN @ ?DUP WHILE CR DUP .CONN REPEAT ;
 : .CONS .CONNECTIONS ;
 
+
 \ A circuit is an array of #BOXES bytes, 1=present in circuit
 VARIABLE CIRCUITS
 : NEW-CIRCUIT ( -- circ )  HERE  CIRCUITS LINK  HERE #BOXES DUP ALLOT ERASE ;
@@ -95,10 +96,11 @@ VARIABLE CIRCUITS
 : ADD ( box circ -- )    CELL+ +  1 SWAP C! ;
 : ADD-CONNECTION ( b1 b2 circ -- )  2DUP ADD  NIP ADD ;
 
-: #CIRCUITS ( -- n )  0  CIRCUITS BEGIN @ ?DUP WHILE  SWAP 1+ SWAP  REPEAT ;
+: SIZE ( circ -- n )  0 SWAP  CELL+ #BOXES BOUNDS DO  I C@ +  LOOP ;
 
-: .CIRCUIT ( circ -- )  #BOXES 0 DO  I OVER HAS IF I .BOX THEN  LOOP DROP ;
-: .CIRCUITS   CIRCUITS BEGIN @ ?DUP WHILE  CR 3 SPACES  DUP .CIRCUIT  REPEAT ;
+: .CIRCUIT ( circ -- )  DUP SIZE .()
+    #BOXES 0 DO  I OVER HAS IF I .BOX THEN  LOOP DROP ;
+: .CIRCUITS   CIRCUITS BEGIN @ ?DUP WHILE  CR DUP .CIRCUIT  REPEAT ;
 
 \ When we add a new connection, there are several possibilities:
 \ 1. Both boxes are already in a circuit, do nothing
@@ -125,12 +127,35 @@ VARIABLE CIRCUITS
     DUP FIND-CIRCUIT ?DUP IF  NIP ADD EXIT  THEN
     NEW-CIRCUIT ADD-CONNECTION ;
 
-: C CONNECT ;
-: L .CIRCUITS ;
-
 : MAKE-CIRCUITS ( n )  CIRCUITS OFF
     0 ( floor)  SWAP 0 DO  SHORTEST  2DUP CONNECT  DISTANCE  LOOP  DROP ;
 
+: C CONNECT ;
+: L .CIRCUITS ;
+: M MAKE-CIRCUITS ;
 
 10 MAKE-CONNECTIONS
 10 MAKE-CIRCUITS
+
+\ Find the 3 largest circuits and multiply their sizes
+CREATE LARGEST 0 , 0 , 0 , ( in order )
+: PRODUCT ( -- n )  LARGEST @  LARGEST CELL+ 2@  * * ;
+: ?LARGER ( n -- )
+    DUP LARGEST 2 CELLS + @ > IF
+        LARGEST CELL+ 2@ LARGEST 2!
+        LARGEST 2 CELLS + !
+    ELSE DUP LARGEST CELL+ @ > IF
+        LARGEST CELL+ @ LARGEST 2!
+    ELSE DUP LARGEST @ > IF
+        LARGEST !
+    ELSE DROP THEN THEN THEN ;
+
+: FIND-LARGEST ( -- )
+    LARGEST 3 CELLS ERASE
+    CIRCUITS BEGIN @ ?DUP WHILE
+        DUP SIZE ?LARGER
+    REPEAT ;
+
+: SOLVE ( -- n )  FIND-LARGEST  PRODUCT ;
+\ 405871866837940 too high
+\ 106020 too high
