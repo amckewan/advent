@@ -18,7 +18,7 @@ include ../init.fs
     OVER BOX X  OVER BOX X -  DUP *  >R
     OVER BOX Y  OVER BOX Y -  DUP *  >R
          BOX Z  SWAP BOX Z -  DUP *  2R> + +
-    S>F FSQRT F>S ;
+    S>F FSQRT 100e F* F>S ;
 
 0 VALUE DISTANCES
 : 'DIST ( b1 b2 -- a )  #BOXES * +  CELLS DISTANCES + ;
@@ -155,6 +155,4 @@ CREATE LARGEST 0 , 0 , 0 , ( in order )
 : SOLVE ( -- n )  FIND-LARGEST  PRODUCT ;
 
 T{ EXAMPLE  10 MAKE-CIRCUITS  SOLVE -> 40 }T
-
-\  T{ INPUT  1000 MAKE-CIRCUITS  SOLVE -> 106020 }T
-\ 106020 too high
+T{ INPUT  1000 MAKE-CIRCUITS  SOLVE -> 42840 }T
