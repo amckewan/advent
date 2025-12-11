@@ -11,10 +11,6 @@ include ../init.fs
 : Y   ( box -- y )   CELL + @ ;
 : Z   ( box -- z )   2 CELLS + @ ;
 
-: X!   ( x box -- )   ! ;
-: Y!   ( y box -- )   CELL + ! ;
-: Z!   ( z box -- )   2 CELLS + ! ;
-
 : .BOX#   ." [" 0 .R ." ] " ;
 : .BOX ( box# )  DUP .BOX#  BOX  DUP X 0 .R  ." ,"  DUP Y 0 .R  ." ,"  Z . ;
 
@@ -67,6 +63,7 @@ T{ 1 3 DISTANCE -> 1 3 DIST }T
 
 : INPUT  :BOXES  S" input.fs" INCLUDED  ;BOXES ;
 
+
 \ find the pair of boxes with the shortest distance, but above floor
 : SHORTEST ( floor -- b1 b2 )   0 0 ROT 1+ -1 ( b1 b2 floor+1 shortest )
     #BOXES 0 DO  #BOXES 0 DO ( 1,000,000 times )
@@ -98,9 +95,9 @@ VARIABLE CIRCUITS
 
 : SIZE ( circ -- n )  0 SWAP  CELL+ #BOXES BOUNDS DO  I C@ +  LOOP ;
 
-: .CIRCUIT ( circ -- )  DUP SIZE .()
-    #BOXES 0 DO  I OVER HAS IF I .BOX THEN  LOOP DROP ;
-: .CIRCUITS   CIRCUITS BEGIN @ ?DUP WHILE  CR DUP .CIRCUIT  REPEAT ;
+: .CIRCUIT ( circ -- )  #BOXES 0 DO  I OVER HAS IF I . THEN  LOOP DROP ;
+: .CIRCUITS   CIRCUITS BEGIN @ ?DUP WHILE
+    DUP SIZE ?DUP IF  CR .() DUP .CIRCUIT  THEN  REPEAT ;
 
 \ When we add a new connection, there are several possibilities:
 \ 1. Both boxes are already in a circuit, do nothing
@@ -139,7 +136,7 @@ VARIABLE CIRCUITS
 
 \ Find the 3 largest circuits and multiply their sizes
 CREATE LARGEST 0 , 0 , 0 , ( in order )
-: PRODUCT ( -- n )  LARGEST @  LARGEST CELL+ 2@  * * ;
+: .LARGEST  LARGEST  DUP ?  CELL+ DUP ?  CELL+ ? ;
 : ?LARGER ( n -- )
     DUP LARGEST 2 CELLS + @ > IF
         LARGEST CELL+ 2@ LARGEST 2!
@@ -149,13 +146,15 @@ CREATE LARGEST 0 , 0 , 0 , ( in order )
     ELSE DUP LARGEST @ > IF
         LARGEST !
     ELSE DROP THEN THEN THEN ;
+: PRODUCT ( -- n )  LARGEST @  LARGEST CELL+ 2@  * * ;
 
 : FIND-LARGEST ( -- )
     LARGEST 3 CELLS ERASE
-    CIRCUITS BEGIN @ ?DUP WHILE
-        DUP SIZE ?LARGER
-    REPEAT ;
+    CIRCUITS BEGIN  @ ?DUP WHILE  DUP SIZE ?LARGER  REPEAT ;
 
 : SOLVE ( -- n )  FIND-LARGEST  PRODUCT ;
-\ 405871866837940 too high
+
+T{ EXAMPLE  10 MAKE-CIRCUITS  SOLVE -> 40 }T
+
+\  T{ INPUT  1000 MAKE-CIRCUITS  SOLVE -> 106020 }T
 \ 106020 too high
