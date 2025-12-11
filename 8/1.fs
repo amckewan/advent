@@ -15,7 +15,8 @@ include ../init.fs
 : Y!   ( y box -- )   CELL + ! ;
 : Z!   ( z box -- )   2 CELLS + ! ;
 
-: .BOX ( box# )  BOX  DUP X 0 .R  ." ,"  DUP Y 0 .R  ." ,"  Z . ;
+: .BOX#   ." [" 0 .R ." ] " ;
+: .BOX ( box# )  DUP .BOX#  BOX  DUP X 0 .R  ." ,"  DUP Y 0 .R  ." ,"  Z . ;
 
 : DIST ( b1 b2 -- n ) \ sqrt((x2-x1)^2 + (y2-y1)^2 + (z2-z1)^2)
     OVER BOX X  OVER BOX X -  DUP *  >R
@@ -31,42 +32,42 @@ include ../init.fs
 : DISTANCE  ( b1 b2 -- n )  'DIST @ ;
 
 : .DISTANCES
-    #BOXES 0 DO  CR #BOXES 0 DO  I J DISTANCE 5 .R  LOOP LOOP ;
+    CR 3 SPACES  #BOXES 0 DO I 5 .R LOOP
+    #BOXES 0 DO  CR I 2 .R ." : "
+      I 1+ 0 DO  I J DISTANCE 5 .R  LOOP LOOP ;
 
 : :BOXES  ALIGN  HERE TO BOXES ;
 : ;BOXES  HERE BOXES - 3 CELLS / TO #BOXES  PRECALC ;
 
 : EXAMPLE
     :BOXES
-    162  ,  817  ,  812 , 
-    57  ,  618  ,  57 , 
-    906  ,  360  ,  560 , 
-    592  ,  479  ,  940 , 
-    352  ,  342  ,  300 , 
-    466  ,  668  ,  158 , 
-    542  ,  29  ,  236 , 
-    431  ,  825  ,  988 , 
-    739 , 650 , 466 , 
-    52 , 470 , 668 , 
-    216 , 146 , 977 , 
-    819 , 987 , 18 , 
-    117 , 168 , 530 , 
-    805 , 96 , 715 , 
-    346 , 949 , 466 , 
-    970 , 615 , 88 , 
-    941 , 993 , 340 , 
-    862 , 61 , 35 , 
-    984 , 92 , 344 , 
-    425 , 690 , 689 , 
+(  0 )  162  ,  817  ,  812 , 
+(  1 )  57  ,  618  ,  57 , 
+(  2 )  906  ,  360  ,  560 , 
+(  3 )  592  ,  479  ,  940 , 
+(  4 )  352  ,  342  ,  300 , 
+(  5 )  466  ,  668  ,  158 , 
+(  6 )  542  ,  29  ,  236 , 
+(  7 )  431  ,  825  ,  988 , 
+(  8 )  739 , 650 , 466 , 
+(  9 )  52 , 470 , 668 , 
+( 10 )  216 , 146 , 977 , 
+( 11 )  819 , 987 , 18 , 
+( 12 )  117 , 168 , 530 , 
+( 13 )  805 , 96 , 715 , 
+( 14 )  346 , 949 , 466 , 
+( 15 )  970 , 615 , 88 , 
+( 16 )  941 , 993 , 340 , 
+( 17 )  862 , 61 , 35 , 
+( 18 )  984 , 92 , 344 , 
+( 19 )  425 , 690 , 689 , 
     ;BOXES ;
 EXAMPLE
 T{ 1 3 DISTANCE -> 1 3 DIST }T
 
 : INPUT  :BOXES  S" input.fs" INCLUDED  ;BOXES ;
 
-: ZEROS  0  #BOXES 0 DO  #BOXES 0 DO  J I DISTANCE 0= IF 1+ THEN  LOOP LOOP ;
-
-
+\ find the pair of boxes with the shortest distance, but above floor
 : SHORTEST ( floor -- b1 b2 )   0 0 ROT 1+ -1 ( b1 b2 floor+1 shortest )
     #BOXES 0 DO  #BOXES 0 DO ( 1,000,000 times )
         2DUP I J DISTANCE -ROT WITHIN ( > floor and < shortest )
@@ -76,84 +77,60 @@ T{ 1 3 DISTANCE -> 1 3 DIST }T
 : .() ( n )  ."   (" 0 .R ." ) " ;
 : L>H ( b1 b2 -- low high )  2DUP > IF SWAP THEN ;
 
-
+\ A connection is a pair of boxes
 VARIABLE CONNECTIONS
 : LINK ( a -- )  HERE  OVER @ ,  SWAP ! ;
-: CONNECT ( b1 b2 -- )  CONNECTIONS LINK  L>H , ,  0 , ( circuit ) ;
-: 'CIRCUIT ( conn -- n )   3 CELLS + ;
-: MAKE ( n )  CONNECTIONS OFF  \ Make n shortest connections
-    0 ( floor)  SWAP 0 DO  SHORTEST  2DUP CONNECT  DISTANCE  LOOP  DROP ;
+: +CONN ( b1 b2 -- )  CONNECTIONS LINK  L>H , , ;
+: MAKE-CONNECTIONS ( n -- )  CONNECTIONS OFF
+    0 ( floor)  SWAP 0 DO  SHORTEST  2DUP +CONN  DISTANCE  LOOP  DROP ;
 
-: C CONNECT ;
-: .CONN ( conn )  DUP 'CIRCUIT @ .()
-    CELL+ 2@  2DUP SWAP 3 .R ."  - " 3 .R  DISTANCE .() ;
-: CC   CONNECTIONS  BEGIN @ ?DUP WHILE CR DUP .CONN REPEAT ;
+: .CONN ( conn )  CELL+ 2@  2DUP SWAP 3 .R ."  - " 3 .R  DISTANCE .() ;
+: .CONNECTIONS   CONNECTIONS  BEGIN @ ?DUP WHILE CR DUP .CONN REPEAT ;
+: .CONS .CONNECTIONS ;
 
+\ A circuit is an array of #BOXES bytes, 1=present in circuit
 VARIABLE CIRCUITS
-: CIRCUIT ( conn )
-    1 CIRCUITS +!  CIRCUITS @ SWAP 'CIRCUIT ! 
-    
-    BEGIN @ ?DUP WHILE
-        ( does this one belong? )
-    REPEAT ;
+: NEW-CIRCUIT ( -- circ )  HERE  CIRCUITS LINK  HERE #BOXES DUP ALLOT ERASE ;
+: HAS ( box circ -- f )  CELL+ +  C@ ;
+: ADD ( box circ -- )    CELL+ +  1 SWAP C! ;
+: ADD-CONNECTION ( b1 b2 circ -- )  2DUP ADD  NIP ADD ;
 
-10 MAKE
-CC
+: #CIRCUITS ( -- n )  0  CIRCUITS BEGIN @ ?DUP WHILE  SWAP 1+ SWAP  REPEAT ;
 
-quit
+: .CIRCUIT ( circ -- )  #BOXES 0 DO  I OVER HAS IF I .BOX THEN  LOOP DROP ;
+: .CIRCUITS   CIRCUITS BEGIN @ ?DUP WHILE  CR 3 SPACES  DUP .CIRCUIT  REPEAT ;
 
-\ Connection:   link, b1, b2
-\ Circuit:      link, connections
-VARIABLE CIRCUITS
+\ When we add a new connection, there are several possibilities:
+\ 1. Both boxes are already in a circuit, do nothing
+\ 2. One of the boxes is in a circuit, add the other box
+\ 3. The boxes are in two difference circuits, join the circuits
+\ 4. Neither box is in a circuit, add a new circuit
 
-: CIRC@ ( circuit -- conn )      CELL+  @ ;
-: CONN@ ( connection -- b1 b2 )  CELL+ 2@ ;
+: FIND-CIRCUIT ( box -- circ )
+    CIRCUITS BEGIN @ DUP WHILE
+        2DUP HAS IF  NIP EXIT  THEN
+    REPEAT  NIP ;
 
-: .CIRCUIT ( circ )  CR ." Circuit:"  CIRC@
-    BEGIN  CR 3 SPACES  DUP .CONNECTION  @ ?DUP 0= UNTIL ;
-: .CIRCUITS  CIRCUITS BEGIN  @ ?DUP WHILE  DUP .CIRCUIT  REPEAT ;
-: C .CIRCUITS ;
-
-\ To add a new connection, if either of the boxes is part of an existing
-\ circuit, add it to that. Otherwise create a new circuit.
-
-: ADD ( b1 b2 circuit -- )  CELL+ LINK,  , , ;
-: NEW ( b1 b2 -- )  HERE  CIRCUITS LINK, 0 ,  ADD ;
-
-: IN-CONNECTION ( b connection -- 0/1 )
-    2DUP CELL+ @ =  -ROT 2 CELLS + @ = OR  NEGATE ;
-
-
-: CONNECTS? ( b1 b2 connection -- f )  CONN@ 2>R ( b1 b2 )
-    OVER R@ =  OVER R> = OR  SWAP R@ = OR  SWAP R> = OR ;
-
-T{ CIRCUITS OFF  1 2 NEW -> }T
-T{ 1 6 CIRCUITS @ CIRC@ CONNECTS? -> TRUE }T
-T{ 2 6 CIRCUITS @ CIRC@ CONNECTS? -> TRUE }T
-T{ 3 6 CIRCUITS @ CIRC@ CONNECTS? -> FALSE }T
-
-: BOX-IN-CIRCUIT ( b circuit -- 0/1 )  CIRC@
-    BEGIN  >R  2DUP R@ CONNECTS? IF  R> DROP  2DROP TRUE EXIT  THEN  R>
-    @ ?DUP 0= UNTIL  2DROP FALSE ;
-
-
-: IN-CIRCUIT? ( b1 b2 circuit -- f )  CIRC@
-    BEGIN  >R  2DUP R@ CONNECTS? IF  R> DROP  2DROP TRUE EXIT  THEN  R>
-    @ ?DUP 0= UNTIL  2DROP FALSE ;
-
-T{ CIRCUITS OFF  1 2 NEW -> }T
-T{ 1 6 CIRCUITS @ IN-CIRCUIT? -> TRUE }T
-T{ 2 6 CIRCUITS @ IN-CIRCUIT? -> TRUE }T
-T{ 3 6 CIRCUITS @ IN-CIRCUIT? -> FALSE }T
-
-\ If one box is in an existing circuit, add to that one
-\ If both boxes are in a circuit, do nothing
-\ If neither box is in a circuit, add a new circuit
-\ : CIRCUIT+ ( b1 b2 circuit -- )
+: JOIN ( circ1 circ2 -- )
+    #BOXES 0 DO  OVER I HAS IF  I OVER ADD  THEN  LOOP
+    DROP CELL+ #BOXES ERASE ;
 
 : CONNECT ( b1 b2 -- )
-    CIRCUITS BEGIN  @ ?DUP WHILE ( b1 b2 circuit )
+    OVER FIND-CIRCUIT ?DUP IF ( b1 in a circuit )
+        OVER FIND-CIRCUIT ?DUP IF ( b2 in a circuit )
+            2DUP = IF ( same circuit ) 2DROP  ELSE  JOIN  THEN
+            2DROP EXIT
+        THEN ( b2 not in a circuit ) ADD DROP EXIT
+    THEN ( b1 not in a circuit )
+    DUP FIND-CIRCUIT ?DUP IF  NIP ADD EXIT  THEN
+    NEW-CIRCUIT ADD-CONNECTION ;
+
+: C CONNECT ;
+: L .CIRCUITS ;
+
+: MAKE-CIRCUITS ( n )  CIRCUITS OFF
+    0 ( floor)  SWAP 0 DO  SHORTEST  2DUP CONNECT  DISTANCE  LOOP  DROP ;
 
 
-        >R  2DUP R@ IN-CIRCUIT? IF  R> ADD EXIT  THEN  R>
-    REPEAT  NEW ;
+10 MAKE-CONNECTIONS
+10 MAKE-CIRCUITS
